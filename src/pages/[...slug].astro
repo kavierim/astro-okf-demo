@@ -5,6 +5,9 @@ import { marked } from 'marked';
 // Lue kaikki wiki-tiedostot
 const allWikiFiles = import.meta.glob('../content/wiki/*.md', { as: 'raw' });
 
+// MAARETTELE entry ensiksi TDZ-virheen vaeltamiseksi
+let entry = null;
+
 // Parse frontmatter ja body manuaalisesti
 function parseMarkdown(content) {
   const lines = content.split('\n');
@@ -69,22 +72,33 @@ for (const [path, importFn] of Object.entries(allWikiFiles)) {
 // Yrita hakea pyydetty sivu slugin perusteella
 const slug = Astro.params.slug || [];
 const slugStr = Array.isArray(slug) ? slug.join('/') : slug;
+
+// Handle empty slug (root path) - redirect to home
+if (!slugStr || slugStr === '') {
+  // This is the root path, but [...slug].astro shouldn't match root
+  // So this shouldn't happen, but let's handle it
+  const homeEntry = parsedEntries.find(e => e.data.okf_id === 'page-home' || e.id === 'home');
+  if (homeEntry) {
+    entry = homeEntry;
+  }
+}
+
 const entryId = slugStr.replace(/\//g, '-') || 'home';
 
 // Etsi sopiva entry
-let entry = null;
+
+// Try exact match first
 for (const e of parsedEntries) {
-  const cleanId = e.id.replace(/\.md$/, '').replace(/\//g, '-');
-  if (cleanId === entryId || cleanId === slugStr || e.id === slugStr) {
+  if (e.id === slugStr || e.id === entryId) {
     entry = e;
     break;
   }
 }
 
-// Jos ei loydy, yrita loytää okf_id:n perusteella
+// Jos ei loydy, yrita okf_id:n perusteella
 if (!entry) {
   for (const e of parsedEntries) {
-    if (e.data.okf_id === entryId || e.data.okf_id === slugStr) {
+    if (e.data.okf_id === slugStr || e.data.okf_id === entryId) {
       entry = e;
       break;
     }
@@ -94,7 +108,7 @@ if (!entry) {
 // Jos yritetaan avata OKF-INDEX, hae se suoraan
 const isOkfIndex = slugStr === 'okf-index' || entryId === 'okf-index';
 
-if (isOkfIndex) {
+if (isOkfIndex && !entry) {
   try {
     const okfIndexFiles = import.meta.glob('../content/OKF-INDEX.md', { as: 'raw' });
     const okfEntries = Object.entries(okfIndexFiles);
@@ -223,7 +237,7 @@ export async function getStaticPaths() {
               <div class="flex flex-wrap gap-2">
                 {relatedEntries.map(related => (
                   <a 
-                    href={import.meta.env.BASE_URL + related.id.replace(/\.md$/, '') + '/'}
+                    href={import.meta.env.BASE_URL + related.id + '/'}
                     class="px-3 py-1 rounded-lg bg-slate-700/50 hover:bg-aurora-purple/20 transition-colors border border-slate-600/50 text-sm text-slate-200 hover:text-white flex items-center gap-2"
                   >
                     <span class="w-2 h-2 rounded-full bg-aurora-purple"></span>
@@ -245,7 +259,7 @@ export async function getStaticPaths() {
           <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {relatedEntries.map(related => (
               <a 
-                href={import.meta.env.BASE_URL + related.id.replace(/\.md$/, '') + '/'}
+                href={import.meta.env.BASE_URL + related.id + '/'}
                 class="block p-4 rounded-xl bg-slate-800/30 hover:bg-slate-700/30 transition-all border border-slate-700/50 hover:border-aurora-purple group"
               >
                 <div class="flex items-start gap-3">
