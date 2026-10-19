@@ -28,7 +28,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Build Astro
-        run: npx astro build --site https://kavierim.github.io --base /astro-okf-demo
+        run: npx astro build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
