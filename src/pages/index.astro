@@ -149,7 +149,7 @@ const eventEntries = parsedEntries
           <div class="space-y-4">
             {newsEntries.map(news => (
               <a 
-                href={import.meta.env.BASE_URL + news.id.replace(/\.md$/, '')}
+                href={import.meta.env.BASE_URL + news.id.replace(/\.md$/, '') + '/'}
                 class="block p-4 rounded-xl bg-slate-700/50 hover:bg-slate-600/50 transition-all border border-slate-600/50 hover:border-aurora-purple group"
               >
                 <div class="flex items-start justify-between gap-4">
@@ -174,7 +174,7 @@ const eventEntries = parsedEntries
         )}
         
         <a 
-          href={import.meta.env.BASE_URL + "news-1"}
+          href={import.meta.env.BASE_URL + "news-1/"}
           class="inline-flex items-center gap-2 mt-6 text-aurora-purple hover:text-aurora-green transition-colors font-medium"
         >
           Katso kaikki uutiset →
@@ -194,7 +194,7 @@ const eventEntries = parsedEntries
           <div class="space-y-4">
             {eventEntries.map(event => (
               <a 
-                href={import.meta.env.BASE_URL + event.id.replace(/\.md$/, '')}
+                href={import.meta.env.BASE_URL + event.id.replace(/\.md$/, '') + '/'}
                 class="block p-4 rounded-xl bg-slate-700/50 hover:bg-slate-600/50 transition-all border border-slate-600/50 hover:border-aurora-green group"
               >
                 <div class="flex items-start justify-between gap-4">
@@ -219,7 +219,7 @@ const eventEntries = parsedEntries
         )}
         
         <a 
-          href={import.meta.env.BASE_URL + "event-1"}
+          href={import.meta.env.BASE_URL + "event-1/"}
           class="inline-flex items-center gap-2 mt-6 text-aurora-green hover:text-aurora-purple transition-colors font-medium"
         >
           Katso kaikki tapahtumat →

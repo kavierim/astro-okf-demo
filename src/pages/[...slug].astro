@@ -223,7 +223,7 @@ export async function getStaticPaths() {
               <div class="flex flex-wrap gap-2">
                 {relatedEntries.map(related => (
                   <a 
-                    href={import.meta.env.BASE_URL + related.id.replace(/\.md$/, '')}
+                    href={import.meta.env.BASE_URL + related.id.replace(/\.md$/, '') + '/'}
                     class="px-3 py-1 rounded-lg bg-slate-700/50 hover:bg-aurora-purple/20 transition-colors border border-slate-600/50 text-sm text-slate-200 hover:text-white flex items-center gap-2"
                   >
                     <span class="w-2 h-2 rounded-full bg-aurora-purple"></span>
@@ -245,7 +245,7 @@ export async function getStaticPaths() {
           <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {relatedEntries.map(related => (
               <a 
-                href={import.meta.env.BASE_URL + related.id.replace(/\.md$/, '')}
+                href={import.meta.env.BASE_URL + related.id.replace(/\.md$/, '') + '/'}
                 class="block p-4 rounded-xl bg-slate-800/30 hover:bg-slate-700/30 transition-all border border-slate-700/50 hover:border-aurora-purple group"
               >
                 <div class="flex items-start gap-3">
@@ -295,7 +295,7 @@ export async function getStaticPaths() {
           Palaa etusivulle
         </a>
         <a 
-          href={import.meta.env.BASE_URL + "okf-index"}
+          href={import.meta.env.BASE_URL + "okf-index/"}
           class="px-6 py-3 bg-slate-700 hover:bg-slate-600 transition-colors rounded-lg font-medium text-white border border-slate-600"
         >
           Katso OKF Index
