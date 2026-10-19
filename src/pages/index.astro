@@ -1,0 +1,230 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { marked } from 'marked';
+
+// Lue home.md suoraan
+const homeModule = import.meta.glob('../content/wiki/home.md', { as: 'raw', eager: true });
+const homeEntries = Object.entries(homeModule);
+let homeContent = '';
+let homeData = { title: 'AI ry – Pohjois-Suomi', summary: 'Pohjois-Suomen tekoälyyhdistys' };
+
+if (homeEntries.length > 0) {
+  const [homePath, homeImport] = homeEntries[0];
+  const content = typeof homeImport === 'function' ? await homeImport() : homeImport;
+  const rawContent = content.default || content || '';
+  homeContent = String(rawContent);
+  
+  // Parse frontmatter
+  const lines = homeContent.split('\n');
+  let inFrontmatter = false;
+  let body = '';
+  let frontmatterEnded = false;
+  
+  for (const line of lines) {
+    if (line.trim() === '---' && !inFrontmatter) {
+      inFrontmatter = true;
+      continue;
+    }
+    if (line.trim() === '---' && inFrontmatter) {
+      inFrontmatter = false;
+      frontmatterEnded = true;
+      continue;
+    }
+    if (inFrontmatter) {
+      const match = line.match(/^(\w+):\s*(.+)$/);
+      if (match) {
+        const key = match[1];
+        let value = match[2].trim();
+        if ((value.startsWith('"') && value.endsWith('"')) || 
+            (value.startsWith("'") && value.endsWith("'"))) {
+          value = value.slice(1, -1);
+        }
+        homeData[key] = value;
+      }
+    }
+    if (frontmatterEnded) {
+      body += line + '\n';
+    }
+  }
+  homeContent = body.trim();
+}
+
+// Lue kaikki wiki-tiedostot
+const allWikiFiles = import.meta.glob('../content/wiki/*.md', { as: 'raw', eager: true });
+const entries = Object.entries(allWikiFiles);
+const parsedEntries = [];
+
+for (const [path, importFn] of entries) {
+  const content = typeof importFn === 'function' ? await importFn() : importFn;
+  const rawContent = content.default || content || '';
+  const contentStr = String(rawContent);
+  const relativePath = path.replace(/\.\.\/src\/content\/wiki\//, '');
+  
+  // Parse frontmatter
+  const lines = contentStr.split('\n');
+  let frontmatter = {};
+  let body = '';
+  let inFrontmatter = false;
+  let frontmatterEnded = false;
+  
+  for (const line of lines) {
+    if (line.trim() === '---' && !inFrontmatter) {
+      inFrontmatter = true;
+      continue;
+    }
+    if (line.trim() === '---' && inFrontmatter) {
+      inFrontmatter = false;
+      frontmatterEnded = true;
+      continue;
+    }
+    if (inFrontmatter) {
+      const match = line.match(/^(\w+):\s*(.+)$/);
+      if (match) {
+        const key = match[1];
+        let value = match[2].trim();
+        if (value.startsWith('[') && value.endsWith(']')) {
+          value = JSON.parse(value);
+        }
+        if ((value.startsWith('"') && value.endsWith('"')) || 
+            (value.startsWith("'") && value.endsWith("'"))) {
+          value = value.slice(1, -1);
+        }
+        frontmatter[key] = value;
+      }
+    }
+    if (frontmatterEnded) {
+      body += line + '\n';
+    }
+  }
+  
+  parsedEntries.push({ 
+    data: frontmatter,
+    body: body.trim(),
+    id: relativePath,
+    file: relativePath
+  });
+}
+
+// Suodata uutiset ja tapahtumat
+const newsEntries = parsedEntries
+  .filter(entry => entry.data.type === 'news')
+  .sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime())
+  .slice(0, 3);
+
+const eventEntries = parsedEntries
+  .filter(entry => entry.data.type === 'event')
+  .sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime())
+  .slice(0, 3);
+---
+
+<Layout title={homeData.title || 'AI ry – Pohjois-Suomi'}>
+  <div class="max-w-4xl mx-auto">
+    <!-- Hero section -->
+    <section class="text-center mb-16 py-12 rounded-2xl bg-slate-800/30 border border-slate-700/50 aurora-animate">
+      <h1 class="text-4xl md:text-6xl font-bold mb-6 aurora-text">
+        {homeData.title || 'Tervetuloa AI ry:ön'}
+      </h1>
+      <p class="text-xl text-slate-300 max-w-2xl mx-auto">
+        {homeData.summary || 'Pohjois-Suomen tekoälyyhdistys'}
+      </p>
+    </section>
+
+    <!-- Main content from home.md -->
+    <article class="prose prose-invert prose-lg max-w-none mb-16">
+      <div set:html={marked.parse(homeContent)} />
+    </article>
+
+    <!-- News and Events grid -->
+    <div class="grid md:grid-cols-2 gap-8 mb-16">
+      <!-- Latest News -->
+      <section class="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/50">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
+            <span class="text-white font-bold">📰</span>
+          </div>
+          <h2 class="text-2xl font-bold aurora-text">Uusimmat uutiset</h2>
+        </div>
+        
+        {newsEntries.length > 0 ? (
+          <div class="space-y-4">
+            {newsEntries.map(news => (
+              <a 
+                href={import.meta.env.BASE_URL + news.id.replace(/\.md$/, '')}
+                class="block p-4 rounded-xl bg-slate-700/50 hover:bg-slate-600/50 transition-all border border-slate-600/50 hover:border-aurora-purple group"
+              >
+                <div class="flex items-start justify-between gap-4">
+                  <div class="flex-1">
+                    <h3 class="font-semibold text-white group-hover:aurora-text transition-colors">
+                      {news.data.title}
+                    </h3>
+                    <p class="text-sm text-slate-400 mt-1">{news.data.summary}</p>
+                    <p class="text-xs text-slate-500 mt-2">
+                      {new Date(news.data.date).toLocaleDateString('fi-FI')}
+                    </p>
+                  </div>
+                  <div class="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center flex-shrink-0">
+                    <span class="text-slate-300">→</span>
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+        ) : (
+          <p class="text-slate-400 italic">Ei uutisia saatavilla.</p>
+        )}
+        
+        <a 
+          href={import.meta.env.BASE_URL + "news-1"}
+          class="inline-flex items-center gap-2 mt-6 text-aurora-purple hover:text-aurora-green transition-colors font-medium"
+        >
+          Katso kaikki uutiset →
+        </a>
+      </section>
+
+      <!-- Latest Events -->
+      <section class="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/50">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center">
+            <span class="text-white font-bold">🎉</span>
+          </div>
+          <h2 class="text-2xl font-bold aurora-text">Tulevat tapahtumat</h2>
+        </div>
+        
+        {eventEntries.length > 0 ? (
+          <div class="space-y-4">
+            {eventEntries.map(event => (
+              <a 
+                href={import.meta.env.BASE_URL + event.id.replace(/\.md$/, '')}
+                class="block p-4 rounded-xl bg-slate-700/50 hover:bg-slate-600/50 transition-all border border-slate-600/50 hover:border-aurora-green group"
+              >
+                <div class="flex items-start justify-between gap-4">
+                  <div class="flex-1">
+                    <h3 class="font-semibold text-white group-hover:aurora-text transition-colors">
+                      {event.data.title}
+                    </h3>
+                    <p class="text-sm text-slate-400 mt-1">{event.data.summary}</p>
+                    <p class="text-xs text-slate-500 mt-2">
+                      {new Date(event.data.date).toLocaleDateString('fi-FI')}
+                    </p>
+                  </div>
+                  <div class="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center flex-shrink-0">
+                    <span class="text-slate-300">→</span>
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+        ) : (
+          <p class="text-slate-400 italic">Ei tapahtumia saatavilla.</p>
+        )}
+        
+        <a 
+          href={import.meta.env.BASE_URL + "event-1"}
+          class="inline-flex items-center gap-2 mt-6 text-aurora-green hover:text-aurora-purple transition-colors font-medium"
+        >
+          Katso kaikki tapahtumat →
+        </a>
+      </section>
+    </div>
+  </div>
+</Layout>

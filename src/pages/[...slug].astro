@@ -1,0 +1,307 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { marked } from 'marked';
+
+// Lue kaikki wiki-tiedostot
+const allWikiFiles = import.meta.glob('../content/wiki/*.md', { as: 'raw' });
+
+// Parse frontmatter ja body manuaalisesti
+function parseMarkdown(content) {
+  const lines = content.split('\n');
+  let frontmatter = {};
+  let body = '';
+  let inFrontmatter = false;
+  let frontmatterEnded = false;
+  
+  for (const line of lines) {
+    if (line.trim() === '---' && !inFrontmatter) {
+      inFrontmatter = true;
+      continue;
+    }
+    if (line.trim() === '---' && inFrontmatter) {
+      inFrontmatter = false;
+      frontmatterEnded = true;
+      continue;
+    }
+    if (inFrontmatter) {
+      const match = line.match(/^(\w+):\s*(.+)$/);
+      if (match) {
+        const key = match[1];
+        let value = match[2].trim();
+        // Handle arrays
+        if (value.startsWith('[') && value.endsWith(']')) {
+          value = JSON.parse(value);
+        }
+        // Handle quoted strings
+        if ((value.startsWith('"') && value.endsWith('"')) || 
+            (value.startsWith("'") && value.endsWith("'"))) {
+          value = value.slice(1, -1);
+        }
+        frontmatter[key] = value;
+      }
+    }
+    if (frontmatterEnded) {
+      body += line + '\n';
+    }
+  }
+  
+  return { data: frontmatter, body: body.trim() };
+}
+
+// Parse kaikki wiki-tiedostot
+const parsedEntries = [];
+
+for (const [path, importFn] of Object.entries(allWikiFiles)) {
+  const content = typeof importFn === 'function' ? await importFn() : importFn;
+  const rawContent = content.default || content || '';
+  const contentStr = String(rawContent);
+  
+  // Extract just the filename without path and extension
+  const filename = path.split('/').pop().replace(/\.md$/, '');
+  
+  parsedEntries.push({ 
+    ...parseMarkdown(contentStr),
+    id: filename,
+    file: filename
+  });
+}
+
+// Yrita hakea pyydetty sivu slugin perusteella
+const slug = Astro.params.slug || [];
+const slugStr = Array.isArray(slug) ? slug.join('/') : slug;
+const entryId = slugStr.replace(/\//g, '-') || 'home';
+
+// Etsi sopiva entry
+let entry = null;
+for (const e of parsedEntries) {
+  const cleanId = e.id.replace(/\.md$/, '').replace(/\//g, '-');
+  if (cleanId === entryId || cleanId === slugStr || e.id === slugStr) {
+    entry = e;
+    break;
+  }
+}
+
+// Jos ei loydy, yrita loytää okf_id:n perusteella
+if (!entry) {
+  for (const e of parsedEntries) {
+    if (e.data.okf_id === entryId || e.data.okf_id === slugStr) {
+      entry = e;
+      break;
+    }
+  }
+}
+
+// Jos yritetaan avata OKF-INDEX, hae se suoraan
+const isOkfIndex = slugStr === 'okf-index' || entryId === 'okf-index';
+
+if (isOkfIndex) {
+  try {
+    const okfIndexFiles = import.meta.glob('../content/OKF-INDEX.md', { as: 'raw' });
+    const okfEntries = Object.entries(okfIndexFiles);
+    if (okfEntries.length > 0) {
+      const [okfPath, okfImportFn] = okfEntries[0];
+      const okfContent = typeof okfImportFn === 'function' ? await okfImportFn() : okfImportFn;
+      const okfContentStr = String(okfContent.default || okfContent || '');
+      entry = {
+        ...parseMarkdown(okfContentStr),
+        id: 'okf-index',
+        file: 'OKF-INDEX.md'
+      };
+    }
+  } catch {
+    // Fallback
+  }
+}
+
+// Jos entrya ei loydy, nayta 404
+const hasEntry = !!entry;
+
+// Hae related entries
+const relatedEntries = entry ? parsedEntries.filter(e => 
+  entry.data.related_ids?.includes(e.data.okf_id)
+) : [];
+
+// Helper function for type labels
+function getTypeLabel(type) {
+  switch (type) {
+    case 'page': return 'Sivu';
+    case 'news': return 'Uutinen';
+    case 'event': return 'Tapahtuma';
+    default: return type;
+  }
+}
+
+// Helper function for type colors
+function getTypeColor(type) {
+  switch (type) {
+    case 'page': return 'bg-blue-500/20 text-blue-300 border border-blue-500/30';
+    case 'news': return 'bg-green-500/20 text-green-300 border border-green-500/30';
+    case 'event': return 'bg-purple-500/20 text-purple-300 border border-purple-500/30';
+    default: return 'bg-slate-500/20 text-slate-300 border border-slate-500/30';
+  }
+}
+
+// Dynamic route configuration for Astro - generate paths for all wiki files
+export const prerender = true;
+
+export async function getStaticPaths() {
+  const files = import.meta.glob('../content/wiki/*.md', { as: 'raw' });
+  const paths = [];
+  
+  for (const [path] of Object.entries(files)) {
+    // Extract just the filename without path and extension
+    const filename = path.split('/').pop().replace(/\.md$/, '');
+    // For [...slug].astro, the slug param is an array, but for simple filenames we can use just the filename
+    paths.push({
+      params: { slug: filename },
+    });
+  }
+  
+  // Add OKF-INDEX
+  paths.push({
+    params: { slug: 'okf-index' },
+  });
+  
+  return paths;
+}
+---
+
+
+<Layout title={entry?.data.title || 'Sivu ei löytynyt'}>{
+  hasEntry && (
+    <div class="max-w-4xl mx-auto">
+      <!-- Page header -->
+      <header class="mb-8">
+        <h1 class="text-3xl md:text-4xl font-bold mb-4 aurora-text">
+          {entry.data.title}
+        </h1>
+        
+        <!-- Type badge -->
+        <div class="flex items-center gap-4 mb-6">
+          <span class={`px-3 py-1 rounded-full text-sm font-medium ${getTypeColor(entry.data.type)}`}>
+            {getTypeLabel(entry.data.type)}
+          </span>
+          <span class="text-slate-400 text-sm">
+            {new Date(entry.data.date).toLocaleDateString('fi-FI')}
+          </span>
+        </div>
+        
+        <p class="text-lg text-slate-300">{entry.data.summary}</p>
+      </header>
+
+      <!-- Main content -->
+      <article class="prose prose-invert prose-lg max-w-none mb-12">
+        <div set:html={marked.parse(entry.body)} />
+      </article>
+
+      <!-- OKF Metadata Box -->
+      <section class="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/50 mb-12">
+        <h2 class="text-xl font-bold mb-4 aurora-text">OKF Metatiedot</h2>
+        
+        <div class="grid md:grid-cols-2 gap-6">
+          <div>
+            <h3 class="font-semibold text-slate-300 mb-3">Perustiedot</h3>
+            <div class="space-y-3">
+              <div class="flex flex-col">
+                <span class="text-sm text-slate-500">OKF ID</span>
+                <code class="text-slate-200 bg-slate-700 px-2 py-1 rounded">{entry.data.okf_id}</code>
+              </div>
+              <div class="flex flex-col">
+                <span class="text-sm text-slate-500">Tyyppi</span>
+                <span class="text-slate-200">{getTypeLabel(entry.data.type)}</span>
+              </div>
+              <div class="flex flex-col">
+                <span class="text-sm text-slate-500">Paivamaara</span>
+                <span class="text-slate-200">{entry.data.date}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div>
+            <h3 class="font-semibold text-slate-300 mb-3">Linkitetyt sivut</h3>
+            {relatedEntries.length > 0 ? (
+              <div class="flex flex-wrap gap-2">
+                {relatedEntries.map(related => (
+                  <a 
+                    href={import.meta.env.BASE_URL + related.id.replace(/\.md$/, '')}
+                    class="px-3 py-1 rounded-lg bg-slate-700/50 hover:bg-aurora-purple/20 transition-colors border border-slate-600/50 text-sm text-slate-200 hover:text-white flex items-center gap-2"
+                  >
+                    <span class="w-2 h-2 rounded-full bg-aurora-purple"></span>
+                    {related.data.title}
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <p class="text-slate-400 text-sm">Ei linkitettyja sivuja</p>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <!-- Related content -->
+      {relatedEntries.length > 0 && (
+        <section class="mb-12">
+          <h2 class="text-2xl font-bold mb-6 aurora-text">Liittyvät sivut</h2>
+          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {relatedEntries.map(related => (
+              <a 
+                href={import.meta.env.BASE_URL + related.id.replace(/\.md$/, '')}
+                class="block p-4 rounded-xl bg-slate-800/30 hover:bg-slate-700/30 transition-all border border-slate-700/50 hover:border-aurora-purple group"
+              >
+                <div class="flex items-start gap-3">
+                  <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-600/50">
+                    <span class="text-lg">?</span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <h3 class="font-semibold text-white group-hover:aurora-text transition-colors truncate">
+                      {related.data.title}
+                    </h3>
+                    <p class="text-sm text-slate-400 truncate">{related.data.summary}</p>
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <!-- Back to top -->
+      <div class="text-center">
+        <button 
+          class="inline-flex items-center gap-2 text-slate-400 hover:text-aurora-purple transition-colors"
+          onclick="window.scrollTo({top: 0, behavior: 'smooth'})"
+        >
+          Takaisin ylös
+        </button>
+      </div>
+    </div>
+  )
+}
+
+{
+  !hasEntry && (
+    <div class="text-center py-20">
+      <h1 class="text-8xl font-bold aurora-text mb-6">404</h1>
+      <h2 class="text-3xl font-bold text-white mb-4">Sivua ei löytynyt</h2>
+      <p class="text-slate-400 mb-8">
+        Valitettavasti etsimääsi sivua ei ole olemassa. 
+        Ehkä revontulet veivät sen avaruuteen?
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a 
+          href={import.meta.env.BASE_URL}
+          class="px-6 py-3 bg-aurora-purple hover:bg-aurora-purple/80 transition-colors rounded-lg font-medium text-white"
+        >
+          Palaa etusivulle
+        </a>
+        <a 
+          href={import.meta.env.BASE_URL + "okf-index"}
+          class="px-6 py-3 bg-slate-700 hover:bg-slate-600 transition-colors rounded-lg font-medium text-white border border-slate-600"
+        >
+          Katso OKF Index
+        </a>
+      </div>
+    </div>
+  )
+}
+</Layout>

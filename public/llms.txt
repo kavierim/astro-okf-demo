@@ -1,0 +1,32 @@
+OKF Index - AI ry Pohjois-Suomen LLM Wiki
+=============================================
+
+Tämä tiedosto on julkinen versio OKF-INDEX.md:stä tekoälyjen helppoon löytämiseen.
+
+SISÄLLÖN INDEKSI:
+-----------------
+
+Staattiset sivut:
+- page-home: Etusivu (src/content/wiki/home.md)
+- page-about: Tietoa meistä (src/content/wiki/about.md)
+
+Uutiset:
+- news-001: Robotti karjui kuuhun (src/content/wiki/news-1.md)
+- news-002: AI löysi menneisyydestä (src/content/wiki/news-2.md)
+
+Tapahtumat:
+- event-001: Revontulten yö (src/content/wiki/event-1.md)
+- event-002: AI-illanistujaiset (src/content/wiki/event-2.md)
+
+PÄIVITYSOHJEET:
+---------------
+1. Kaikki tekstisisältö on .md-tiedostoina src/content/wiki/-kansiossa
+2. Jokaisella tiedostolla on OKF-frontmatter (okf_id, title, type, date, summary, related_ids)
+3. Päivitä OKF-INDEX.md uusilla tiedoilla
+4. Älä muokkaa .astro-tiedostoja
+
+LISÄTIETOJA:
+------------
+- Sivusto: https://kavierim.github.io/astro-okf-demo/
+- Tyyli: Tumma revontuli-teema (Tailwind CSS)
+- Reititys: Dynaamiset sivut [...slug].astro:n kautta

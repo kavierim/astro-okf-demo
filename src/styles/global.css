@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', sans-serif;
+  
+  /* Revontuli color palette - Northern Lights inspired */
+  --color-aurora-green: #00ff88;
+  --color-aurora-purple: #a855f7;
+  --color-aurora-pink: #ec4899;
+  --color-aurora-blue: #3b82f6;
+  --color-aurora-dark: #0f172a;
+  --color-aurora-darker: #020617;
+  --color-snow: #f8fafc;
+  --color-frost: #e2e8f0;
+  
+  /* Background gradients */
+  --gradient-aurora: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  --gradient-aurora-active: linear-gradient(135deg, #0f172a 0%, #a855f7 25%, #3b82f6 50%, #00ff88 75%, #0f172a 100%);
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html {
+  min-height: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--gradient-aurora);
+  color: var(--snow);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* Aurora background effect */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(ellipse at 20% 50%, rgba(0, 255, 136, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 50%, rgba(168, 85, 247, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 100%, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--aurora-dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--aurora-purple);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--aurora-green);
+}
+
+/* Selection */
+::selection {
+  background: var(--aurora-purple);
+  color: var(--snow);
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid var(--aurora-green);
+  outline-offset: 2px;
+}
+
+/* Custom classes for aurora effects */
+.aurora-text {
+  background: linear-gradient(135deg, var(--aurora-green), var(--aurora-purple), var(--aurora-pink));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.aurora-border {
+  border: 2px solid transparent;
+  background: linear-gradient(white, white) padding-box, 
+              linear-gradient(135deg, var(--aurora-green), var(--aurora-purple), var(--aurora-pink)) border-box;
+}
+
+.aurora-glow {
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.3), 
+              0 0 40px rgba(0, 255, 136, 0.2);
+}
+
+/* Animation for subtle aurora effect */
+@keyframes aurora-pulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+.aurora-animate {
+  animation: aurora-pulse 8s ease-in-out infinite;
+}
